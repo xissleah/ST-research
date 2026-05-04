@@ -1,0 +1,36 @@
+【核心结论】
+你搜索的是短词：“hi”。这个词可能有多种含义，因此这里只展示搜索结果，不强行推断你的真实意图。
+
+【搜索结果】
+1. Hannah Diamond - Hi (Official Video) - YouTube
+来源：youtube.com；权重：2；相关性：25；总分：184
+链接：https://www.youtube.com/watch?v=mKztreA6e7Y
+摘要：Nov 2, 2015 · Popstar and professional image-maker Hannah Diamond has quickly become a poster girl for PC Music, the record label that has taken the world ...
+
+2. HI Definition & Meaning - Merriam-Webster
+来源：merriam-webster.com；权重：1；相关性：25；总分：178
+链接：https://www.merriam-webster.com/dictionary/hi
+摘要：Apr 23, 2026 · used especially as a greeting; just called to say hi. HI 2 of 2 abbreviation 1. Hawaii 2. high intensity 3. humidity index.
+
+3. HI Definition & Meaning - Dictionary.com
+来源：dictionary.com；权重：1；相关性：25；总分：178
+链接：https://www.dictionary.com/browse/hi
+摘要：(used as an exclamation of greeting) hello! HI. HI. abbreviation. Hawaii (approved especially for use with zip code). H.I.. H.I.. abbreviation. Hawaiian Islands ...
+
+4. HI | English meaning - Cambridge Dictionary
+来源：dictionary.cambridge.org；权重：1；相关性：25；总分：178
+链接：https://dictionary.cambridge.org/dictionary/english/hi
+摘要：HI definition: 1. used as an informal greeting, usually to people who you know: 2. written abbreviation for the…. Learn more.
+
+5. Hi Definition & Meaning | YourDictionary
+来源：yourdictionary.com；权重：1；相关性：25；总分：178
+链接：https://www.yourdictionary.com/hi
+摘要：Hi definition: Used to express greeting. Origin of Hi American English (first recorded reference is to speech of a Kansas Indian), originally to attract attention, probably a varia
+
+6. HI
+来源：en.wikipedia.org；权重：1；相关性：25；总分：155
+链接：https://en.wikipedia.org/wiki/HI
+摘要：Topics referred to by the same term
+
+【不确定部分】
+短词搜索不交给模型自由总结，避免模型根据歧义词脑补错误场景。

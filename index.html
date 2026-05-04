@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>AI 本地搜索</title>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"], ["$$", "$$"]],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+      },
+      chtml: {
+        scale: 1,
+        displayAlign: "left",
+        displayIndent: "0"
+      },
+      startup: {
+        typeset: false
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #fffaf1;
+      --panel-2: #ffffff;
+      --text: #24211c;
+      --muted: #746f66;
+      --soft: #e5ded2;
+      --line: #d6ccbd;
+      --accent: #3f6f4e;
+      --accent-dark: #2f553b;
+      --accent-soft: #dfeadd;
+      --warn: #a15c20;
+      --error: #a13a2a;
+      --shadow: 0 18px 50px rgba(56, 49, 38, 0.12);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(180, 150, 104, 0.22), transparent 34%),
+        linear-gradient(180deg, #f7f2e8 0%, #eee8dd 100%);
+    }
+
+    .page {
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 44px 20px 64px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 34px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      background: var(--accent);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(63, 111, 78, 0.24);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .brand-subtitle {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .service-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 250, 241, 0.78);
+      color: var(--muted);
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(63, 111, 78, 0.12);
+    }
+
+    .status-dot.offline {
+      background: var(--error);
+      box-shadow: 0 0 0 4px rgba(161, 58, 42, 0.12);
+    }
+
+    .hero {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 6vw, 58px);
+      line-height: 1.04;
+      letter-spacing: -0.06em;
+      color: var(--text);
+    }
+
+    .hero p {
+      max-width: 720px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .search-card {
+      margin-top: 28px;
+      padding: 18px;
+      border: 1px solid rgba(214, 204, 189, 0.9);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 250, 241, 0.84);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .input-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 10px;
+      min-width: 118px;
+    }
+
+    .translate-btn {
+      background: #6b5c3d;
+    }
+
+    .translate-btn:hover {
+      background: #55482e;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 86px;
+      max-height: 210px;
+      resize: vertical;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      outline: none;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.6;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    textarea::placeholder {
+      color: #9b9386;
+    }
+
+    textarea:focus {
+      border-color: rgba(63, 111, 78, 0.65);
+      box-shadow: 0 0 0 4px rgba(63, 111, 78, 0.12);
+    }
+
+    button {
+      min-width: 118px;
+      padding: 0 22px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--accent);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.56;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .stop-btn {
+      display: none;
+      background: #9b4a36;
+    }
+
+    .stop-btn:hover {
+      background: #7f3827;
+    }
+
+    .stop-btn.active {
+      display: block;
+    }
+
+    .hint-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mode-list,
+    .depth-list {
+      display: grid;
+      grid-template-columns: repeat(2, 122px);
+      gap: 12px;
+      margin-top: 18px;
+      align-items: center;
+    }
+
+    .depth-list {
+      margin-top: 12px;
+    }
+
+    .mode-btn,
+    .depth-btn {
+      width: 122px;
+      min-width: 122px;
+      height: 58px;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.56);
+      color: #625b51;
+      font-size: 16px;
+      font-weight: 750;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+    }
+
+    .mode-btn:hover,
+    .depth-btn:hover {
+      background: var(--accent-soft);
+      border-color: rgba(63, 111, 78, 0.25);
+      color: var(--accent-dark);
+      transform: none;
+    }
+
+    .mode-btn.active,
+    .depth-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(63, 111, 78, 0.18);
+    }
+
+    .mode-description {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .progress-card {
+      display: none;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid rgba(214, 204, 189, 0.9);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 12px 34px rgba(56, 49, 38, 0.08);
+    }
+
+    .progress-card.active {
+      display: block;
+    }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .progress-title {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .progress-percent {
+      color: var(--accent-dark);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar {
+      width: 100%;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e1d8ca;
+    }
+
+    .bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #6f8f5f, #3f6f4e);
+      transition: width 0.42s ease;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .step-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      color: #8f8678;
+      font-size: 12px;
+      background: #fffaf1;
+    }
+
+    .step.active {
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .step.active .step-icon {
+      border-color: rgba(63, 111, 78, 0.35);
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      animation: breathe 1.1s ease-in-out infinite;
+    }
+
+    .step.done {
+      color: #4f5a4a;
+    }
+
+    .step.done .step-icon {
+      border-color: rgba(63, 111, 78, 0.28);
+      background: var(--accent);
+      color: #fff;
+      animation: none;
+    }
+
+    @keyframes breathe {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(63, 111, 78, 0.2);
+      }
+      50% {
+        transform: scale(1.06);
+        box-shadow: 0 0 0 6px rgba(63, 111, 78, 0.08);
+      }
+    }
+
+    .error-box {
+      display: none;
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid rgba(161, 58, 42, 0.22);
+      border-radius: var(--radius-md);
+      background: rgba(161, 58, 42, 0.08);
+      color: var(--error);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .error-box.active {
+      display: block;
+    }
+
+    .result-card {
+      display: none;
+      margin-top: 20px;
+      border: 1px solid rgba(214, 204, 189, 0.95);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 250, 241, 0.92);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .result-card.active {
+      display: block;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--soft);
+      background: rgba(255, 255, 255, 0.48);
+    }
+
+    .result-header strong {
+      font-size: 16px;
+    }
+
+    .copy-btn {
+      min-width: auto;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      background: #fffaf1;
+      color: var(--text);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      transform: none;
+    }
+
+    .result-content {
+      padding: 24px 26px 30px;
+      word-break: break-word;
+      line-height: 1.82;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .result-section {
+      margin-bottom: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--soft);
+    }
+
+    .result-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .result-section h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 850;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .result-section.highlight {
+      padding: 18px 20px;
+      border: 1px solid rgba(63, 111, 78, 0.18);
+      border-radius: 18px;
+      background: var(--accent-soft);
+    }
+
+    .result-section.highlight h3 {
+      color: var(--accent-dark);
+    }
+
+    .section-body p {
+      margin: 0 0 10px;
+    }
+
+    .result-item {
+      margin: 8px 0;
+      padding: 9px 12px;
+      border-left: 3px solid rgba(63, 111, 78, 0.32);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.52);
+    }
+
+    .source-item {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(214, 204, 189, 0.78);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .source-item a {
+      color: var(--accent-dark);
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .source-item a:hover {
+      text-decoration: underline;
+    }
+
+    .muted-line {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .result-paragraph {
+      line-height: 1.82;
+      white-space: pre-wrap;
+    }
+
+    mjx-container {
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    mjx-container[jax="CHTML"][display="true"] {
+      margin: 14px 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(214, 204, 189, 0.78);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        padding-top: 26px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .input-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        height: 50px;
+      }
+
+      .action-buttons {
+        grid-template-rows: none;
+        grid-template-columns: 1fr 1fr 1fr;
+        width: 100%;
+      }
+
+      .hint-row {
+        flex-direction: column;
+      }
+
+      .mode-list,
+      .depth-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .mode-btn,
+      .depth-btn {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div>
+          <div class="brand-title">本地 AI 搜索</div>
+          <div class="brand-subtitle">Qwen · SearXNG · Local Files</div>
+        </div>
+      </div>
+
+      <div class="service-pill">
+        <span class="status-dot offline" id="statusDot"></span>
+        <span id="statusText">正在连接服务...</span>
+      </div>
+    </header>
+
+    <section class="hero">
+
+      <p>
+        “问问题”会生成结论和分析；“查资料”只列资料、摘要和评分。默认快速模式会减少模型调用和搜索次数，速度更快！
+      </p>
+      <p>
+        如果输入的指令是中文，建议转译后再搜索~
+      </p>
+    </section>
+
+    <section class="search-card">
+      <div class="input-wrap">
+        <textarea id="questionInput" placeholder="请输入你想搜索的问题，例如：为什么大模型里权重和激活的作用不同？" autofocus></textarea>
+        <div class="action-buttons">
+          <button id="searchBtn" type="button">搜索</button>
+          <button id="translateBtn" class="translate-btn" type="button">转译</button>
+          <button id="stopBtn" class="stop-btn" type="button">终止</button>
+        </div>
+      </div>
+
+      <div class="hint-row">
+        <span>Enter 换行，Ctrl + Enter 搜索</span>
+        <span id="smallStatus">等待输入</span>
+      </div>
+
+      <div class="mode-list" id="modeList">
+        <button class="mode-btn active" type="button" data-mode="answer">问问题</button>
+        <button class="mode-btn" type="button" data-mode="resource">查资料</button>
+      </div>
+
+      <div class="depth-list" id="depthList">
+        <button class="depth-btn active" type="button" data-depth="fast">快速优先</button>
+        <button class="depth-btn" type="button" data-depth="precise">精准优先</button>
+      </div>
+
+      <div class="mode-description" id="modeDescription">
+        问问题：适合“为什么、怎么做、是什么、对比、原理”等问题，会先总结再分析。
+      </div>
+    </section>
+
+    <section class="progress-card" id="progressCard">
+      <div class="progress-head">
+        <div class="progress-title" id="progressTitle">准备开始</div>
+        <div class="progress-percent" id="progressPercent">0%</div>
+      </div>
+
+      <div class="bar">
+        <div class="bar-fill" id="barFill"></div>
+      </div>
+
+      <div class="steps" id="steps">
+        <div class="step" data-step="0">
+          <div class="step-icon">1</div>
+          <div>连接本地服务，提交用户问题</div>
+        </div>
+        <div class="step" data-step="1">
+          <div class="step-icon">2</div>
+          <div>写入 question.txt，读取 search.txt 和 website.txt</div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-icon">3</div>
+          <div>准备搜索词</div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-icon">4</div>
+          <div>调用 SearXNG 检索网页信息</div>
+        </div>
+        <div class="step" data-step="4">
+          <div class="step-icon">5</div>
+          <div>根据网站权重和相关性排序</div>
+        </div>
+        <div class="step" data-step="5">
+          <div class="step-icon">6</div>
+          <div>整理答案或资料列表</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="error-box" id="errorBox"></section>
+
+    <section class="result-card" id="resultCard">
+      <div class="result-header">
+        <strong>搜索结果</strong>
+        <button class="copy-btn" id="copyBtn" type="button">复制结果</button>
+      </div>
+      <div class="result-content" id="resultContent"></div>
+    </section>
+
+    <div class="footer-note">
+      说明：搜索期间可点击“终止”中断当前任务；“转译”会把搜索框中的中文转成英文、英文转成中文；结果区支持 LaTeX 数学公式渲染。若 MathJax CDN 无法访问，公式会以原始文本显示。
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    const questionInput = document.getElementById("questionInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const translateBtn = document.getElementById("translateBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const smallStatus = document.getElementById("smallStatus");
+
+    const progressCard = document.getElementById("progressCard");
+    const progressTitle = document.getElementById("progressTitle");
+    const progressPercent = document.getElementById("progressPercent");
+    const barFill = document.getElementById("barFill");
+    const stepEls = Array.from(document.querySelectorAll(".step"));
+
+    const errorBox = document.getElementById("errorBox");
+    const resultCard = document.getElementById("resultCard");
+    const resultContent = document.getElementById("resultContent");
+    const copyBtn = document.getElementById("copyBtn");
+    const modeDescription = document.getElementById("modeDescription");
+
+    let isLoading = false;
+    let progressTimer = null;
+    let progressPollTimer = null;
+    let progressValue = 0;
+    let currentStep = 0;
+    let selectedMode = "answer";
+    let selectedDepth = "fast";
+    let currentAbortController = null;
+
+    const progressPlan = [
+      { pct: 10, title: "正在提交问题..." },
+      { pct: 22, title: "正在读取本地配置..." },
+      { pct: 36, title: "正在准备搜索词..." },
+      { pct: 58, title: "正在通过 SearXNG 搜索..." },
+      { pct: 76, title: "正在筛选和排序搜索结果..." },
+      { pct: 91, title: "正在整理最终结果..." }
+    ];
+
+    function setServiceStatus(online) {
+      if (online) {
+        statusDot.className = "status-dot";
+        statusText.textContent = "模型服务已就绪";
+      } else {
+        statusDot.className = "status-dot offline";
+        statusText.textContent = "模型服务未连接";
+      }
+    }
+
+    function setStep(index) {
+      currentStep = Math.max(0, Math.min(index, stepEls.length - 1));
+
+      stepEls.forEach((el, i) => {
+        el.classList.remove("active", "done");
+
+        const icon = el.querySelector(".step-icon");
+
+        if (!icon) return;
+
+        if (i < currentStep) {
+          el.classList.add("done");
+          icon.textContent = "✓";
+        } else if (i === currentStep) {
+          el.classList.add("active");
+          icon.textContent = String(i + 1);
+        } else {
+          icon.textContent = String(i + 1);
+        }
+      });
+    }
+
+    function setProgress(value, title) {
+      progressValue = Math.max(0, Math.min(100, value));
+      barFill.style.width = progressValue + "%";
+      progressPercent.textContent = Math.round(progressValue) + "%";
+
+      if (title) {
+        progressTitle.textContent = title;
+        smallStatus.textContent = title;
+      }
+
+      const stepIndex = Math.min(
+        progressPlan.length - 1,
+        Math.floor(progressValue / 17)
+      );
+
+      setStep(stepIndex);
+    }
+
+    function startProgress() {
+      progressCard.classList.add("active");
+      setProgress(3, "正在启动搜索流程...");
+
+      let planIndex = 0;
+
+      clearInterval(progressTimer);
+      clearInterval(progressPollTimer);
+
+      progressTimer = setInterval(() => {
+        const target = progressPlan[Math.min(planIndex, progressPlan.length - 1)];
+
+        if (progressValue < target.pct) {
+          const gap = target.pct - progressValue;
+          setProgress(progressValue + Math.max(1, gap * 0.18), target.title);
+        } else if (planIndex < progressPlan.length - 1) {
+          planIndex += 1;
+        } else if (progressValue < 94) {
+          setProgress(progressValue + 0.5, "仍在等待本地模型返回结果...");
+        }
+      }, 650);
+
+      progressPollTimer = setInterval(pollBackendProgress, 700);
+    }
+
+    async function pollBackendProgress() {
+      try {
+        const resp = await fetch(API_BASE + "/progress", { cache: "no-store" });
+        if (!resp.ok) return;
+
+        const data = await resp.json();
+
+        if (typeof data.percent === "number") {
+          const title = data.detail
+            ? `${data.stage}：${data.detail}`
+            : data.stage || "正在处理";
+
+          setProgress(Math.max(progressValue, data.percent), title);
+        }
+      } catch {
+        // 后端进度接口不可用时，继续使用前端估算进度。
+      }
+    }
+
+    function finishProgress() {
+      clearInterval(progressTimer);
+      clearInterval(progressPollTimer);
+      setProgress(100, "搜索完成");
+
+      stepEls.forEach((el) => {
+        el.classList.remove("active");
+        el.classList.add("done");
+
+        const icon = el.querySelector(".step-icon");
+        if (icon) icon.textContent = "✓";
+      });
+
+      setTimeout(() => {
+        progressCard.classList.remove("active");
+        smallStatus.textContent = "完成";
+      }, 700);
+    }
+
+    function stopProgressWithError() {
+      clearInterval(progressTimer);
+      clearInterval(progressPollTimer);
+      progressTitle.textContent = "搜索失败";
+      smallStatus.textContent = "搜索失败";
+    }
+
+    function stopProgressAsCancelled() {
+      clearInterval(progressTimer);
+      clearInterval(progressPollTimer);
+      setProgress(100, "搜索已终止");
+      progressTitle.textContent = "搜索已终止";
+      smallStatus.textContent = "已终止";
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.add("active");
+    }
+
+    function hideError() {
+      errorBox.classList.remove("active");
+      errorBox.textContent = "";
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeModelText(text) {
+      return String(text || "")
+        .replace(/\*\*/g, "")
+        .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+        .replace(/^\s*[-=_]{3,}\s*$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function linkifyEscaped(text) {
+      const safe = escapeHtml(text);
+      return safe.replace(
+        /(https?:\/\/[^\s<>"']+)/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+      );
+    }
+
+    function formatSectionBody(sectionName, body) {
+      const lines = body
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.length === 0) {
+        return '<p class="muted-line">暂无内容。</p>';
+      }
+
+      return lines.map((line) => {
+        const cleanedLine = line
+          .replace(/^\s*[-•]\s*/, "")
+          .replace(/^\s*\*\s*/, "");
+
+        const html = linkifyEscaped(cleanedLine);
+
+        if (
+          sectionName === "主要来源" ||
+          sectionName === "搜索结果" ||
+          sectionName === "来源评分" ||
+          sectionName === "找到的资料"
+        ) {
+          return `<div class="source-item">${html}</div>`;
+        }
+
+        if (
+          /^\d+[\.、]/.test(cleanedLine) ||
+          /^来源：/.test(cleanedLine) ||
+          /^链接：/.test(cleanedLine) ||
+          /^摘要：/.test(cleanedLine) ||
+          /^评分：/.test(cleanedLine)
+        ) {
+          return `<div class="result-item">${html}</div>`;
+        }
+
+        return `<p>${html}</p>`;
+      }).join("");
+    }
+
+    function renderStructuredResult(text) {
+      const raw = normalizeModelText(text || "没有返回结果。");
+
+      const sectionNames = [
+        "核心结论",
+        "简要依据",
+        "详细分析",
+        "不确定部分",
+        "主要来源",
+        "搜索结果",
+        "来源评分",
+        "找到的资料",
+        "使用建议",
+        "建议",
+        "公式"
+      ];
+
+      let html = "";
+      let currentSection = "";
+      let buffer = [];
+
+      function flush() {
+        const body = buffer.join("\n").trim();
+        if (!currentSection && !body) return;
+
+        if (!currentSection) {
+          html += `<section class="result-section highlight"><h3>核心结论</h3><div class="section-body">${formatSectionBody("核心结论", body)}</div></section>`;
+        } else {
+          const sectionClass = currentSection === "核心结论"
+            ? "result-section highlight"
+            : "result-section";
+
+          html += `
+            <section class="${sectionClass}">
+              <h3>${escapeHtml(currentSection)}</h3>
+              <div class="section-body">${formatSectionBody(currentSection, body)}</div>
+            </section>
+          `;
+        }
+
+        buffer = [];
+      }
+
+      for (const line of raw.split("\n")) {
+        const trimmed = line.trim();
+        const match = trimmed.match(/^【(.+?)】$/);
+
+        if (match && sectionNames.includes(match[1])) {
+          flush();
+          currentSection = match[1];
+        } else {
+          buffer.push(line);
+        }
+      }
+
+      flush();
+
+      return html || `<div class="result-paragraph">${escapeHtml(raw)}</div>`;
+    }
+
+    function showResult(text) {
+      resultContent.innerHTML = renderStructuredResult(text);
+      resultCard.classList.add("active");
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetClear && window.MathJax.typesetClear([resultContent]);
+        window.MathJax.typesetPromise([resultContent]).catch(() => {
+          // MathJax 加载失败或公式语法错误时，保留原始文本。
+        });
+      }
+    }
+
+    function setLoading(loading) {
+      isLoading = loading;
+      searchBtn.disabled = loading;
+      translateBtn.disabled = loading;
+      searchBtn.textContent = loading ? "搜索中" : "搜索";
+
+      stopBtn.classList.toggle("active", loading);
+      stopBtn.disabled = !loading;
+
+      if (loading) {
+        statusDot.className = "status-dot";
+        statusText.textContent = "正在处理搜索任务";
+      } else {
+        setServiceStatus(true);
+      }
+    }
+
+    function updateModeDescription() {
+      const depthText = selectedDepth === "fast"
+        ? "当前为快速优先：减少搜索次数和模型生成长度，速度更快。"
+        : "当前为精准优先：会增加搜索和生成长度，速度较慢但召回更好。";
+
+      if (selectedMode === "resource") {
+        modeDescription.textContent = `查资料：适合“找文章、找论文、找资料、推荐链接”等需求，只列资料、摘要和评分，不强行分析。${depthText}`;
+        questionInput.placeholder = "请输入你想查找的资料主题，例如：大模型权重量化和激活量化相关文章";
+      } else {
+        modeDescription.textContent = `问问题：适合“为什么、怎么做、是什么、对比、原理”等问题，会先总结再分析。${depthText}`;
+        questionInput.placeholder = "请输入你想搜索的问题，例如：为什么大模型里权重和激活的作用不同？";
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const resp = await fetch(API_BASE + "/ping", { cache: "no-store" });
+        setServiceStatus(resp.ok);
+      } catch {
+        setServiceStatus(false);
+      }
+    }
+
+    async function fetchLatestResult() {
+      try {
+        const resp = await fetch(API_BASE + "/result", { cache: "no-store" });
+
+        if (!resp.ok) return null;
+
+        const data = await resp.json();
+        return data.result || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function stopSearch() {
+      if (!isLoading) return;
+
+      stopBtn.disabled = true;
+      stopBtn.textContent = "终止中";
+
+      try {
+        await fetch(API_BASE + "/cancel", {
+          method: "POST",
+          cache: "no-store"
+        });
+      } catch {
+        // 即使取消请求失败，也先中断前端等待。
+      }
+
+      if (currentAbortController) {
+        currentAbortController.abort();
+      }
+
+      stopProgressAsCancelled();
+      showError("已请求终止本次搜索。模型生成通常会很快停止；如果正卡在外部搜索请求，会在超时后结束。");
+      setLoading(false);
+
+      setTimeout(() => {
+        stopBtn.textContent = "终止";
+      }, 300);
+    }
+
+
+    async function doTranslate() {
+      const text = questionInput.value.trim();
+
+      if (!text) {
+        showError("请输入需要转译的内容。");
+        questionInput.focus();
+        return;
+      }
+
+      if (isLoading) return;
+
+      hideError();
+      const oldText = translateBtn.textContent;
+      translateBtn.disabled = true;
+      searchBtn.disabled = true;
+      translateBtn.textContent = "转译中";
+      smallStatus.textContent = "正在转译搜索框内容";
+
+      try {
+        const response = await fetch(API_BASE + "/translate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8"
+          },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || ("服务器返回错误：" + response.status));
+        }
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        questionInput.value = data.translated || text;
+        smallStatus.textContent = "转译完成";
+      } catch (err) {
+        showError("转译失败：" + err.message);
+        smallStatus.textContent = "转译失败";
+      } finally {
+        translateBtn.disabled = false;
+        searchBtn.disabled = false;
+        translateBtn.textContent = oldText;
+      }
+    }
+
+
+    async function doSearch() {
+      const question = questionInput.value.trim();
+
+      if (!question) {
+        showError("请输入问题。");
+        questionInput.focus();
+        return;
+      }
+
+      if (isLoading) return;
+
+      hideError();
+      resultCard.classList.remove("active");
+      setLoading(true);
+      startProgress();
+
+      currentAbortController = new AbortController();
+
+      try {
+        const response = await fetch(API_BASE + "/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8"
+          },
+          body: JSON.stringify({
+            question,
+            mode: selectedMode,
+            depth: selectedDepth
+          }),
+          signal: currentAbortController.signal
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || ("服务器返回错误：" + response.status));
+        }
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        finishProgress();
+        showResult(data.result);
+
+        const latest = await fetchLatestResult();
+        if (latest) {
+          showResult(latest);
+        }
+      } catch (err) {
+        if (err.name === "AbortError") {
+          stopProgressAsCancelled();
+          showError("已终止本次搜索。");
+        } else {
+          stopProgressWithError();
+          showError("请求失败：" + err.message);
+        }
+      } finally {
+        currentAbortController = null;
+        setLoading(false);
+        stopBtn.textContent = "终止";
+      }
+    }
+
+    document.querySelectorAll(".mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedMode = btn.dataset.mode || "answer";
+
+        document.querySelectorAll(".mode-btn").forEach((item) => {
+          item.classList.toggle("active", item === btn);
+        });
+
+        updateModeDescription();
+      });
+    });
+
+    document.querySelectorAll(".depth-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedDepth = btn.dataset.depth || "fast";
+
+        document.querySelectorAll(".depth-btn").forEach((item) => {
+          item.classList.toggle("active", item === btn);
+        });
+
+        updateModeDescription();
+      });
+    });
+
+    searchBtn.addEventListener("click", doSearch);
+    translateBtn.addEventListener("click", doTranslate);
+    stopBtn.addEventListener("click", stopSearch);
+
+    questionInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && event.ctrlKey) {
+        doSearch();
+      }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const text = resultContent.textContent || "";
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "已复制";
+
+        setTimeout(() => {
+          copyBtn.textContent = "复制结果";
+        }, 1200);
+      } catch {
+        showError("复制失败，请手动选择文本复制。");
+      }
+    });
+
+    updateModeDescription();
+    checkHealth();
+    setInterval(checkHealth, 10000);
+  </script>
+</body>
+</html>
